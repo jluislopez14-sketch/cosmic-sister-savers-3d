@@ -1397,7 +1397,6 @@ export class Game {
       const sceneryKey = ({ FLYING_MODE: 'space', RE_ENTRY_MODE: 'reentry', ON_FOOT_MODE: 'cave', BOSS_MODE: 'boss' })[def.mode] || 'space';
       this._setActiveScenery(sceneryKey);
     }
-    const def = LEVELS[missionIdx];
     const story = STORY[def.key];
 
     document.getElementById('comic-title').textContent = story?.title ?? def.title;
