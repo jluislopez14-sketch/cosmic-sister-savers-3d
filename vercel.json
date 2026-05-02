@@ -4,6 +4,11 @@
   "buildCommand": null,
   "outputDirectory": ".",
   "framework": null,
+  "rewrites": [
+    { "source": "/api/auth/anonymous", "destination": "/api/auth" },
+    { "source": "/api/avatar/:uuid/status", "destination": "/api/avatar?uuid=:uuid&action=status" },
+    { "source": "/api/avatar/:uuid/glb",    "destination": "/api/avatar?uuid=:uuid&action=glb" }
+  ],
   "headers": [
     {
       "source": "/models/(.*).glb",

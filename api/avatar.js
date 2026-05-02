@@ -13,8 +13,32 @@
 // with the secret token attached.
 
 import { Buffer } from 'node:buffer';
+import { verifyToken } from './auth.js';
 
 const RODIN_BASE = 'https://hyperhuman.deemos.com';
+
+// Coarse rate limiting (per-IP, per-process). On warm Fluid instances this
+// lasts; on cold starts we get a fresh window. For real production use, swap
+// for an Upstash-backed sliding window.
+const ipBuckets = new Map();
+const RATE_WINDOW_MS = 3600_000;   // 1h
+const RATE_MAX_CALLS = 5;
+
+function rateLimited(req) {
+  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+  const now = Date.now();
+  const list = (ipBuckets.get(ip) || []).filter((t) => now - t < RATE_WINDOW_MS);
+  list.push(now);
+  ipBuckets.set(ip, list);
+  return list.length > RATE_MAX_CALLS;
+}
+
+function requireAuth(req) {
+  const h = req.headers['authorization'] || '';
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  if (!m) return null;
+  return verifyToken(m[1]);
+}
 
 function corsHeaders() {
   return {
@@ -130,11 +154,29 @@ export default async function handler(req, res) {
   const apiKey = process.env.HYPER3D_API_KEY;
   if (!apiKey) return notConfigured(res);
 
-  // Parse the path to find /:uuid/(status|glb)
+  // Auth + rate-limit on POST (the only endpoint that costs Rodin credits).
+  // Status + GLB downloads are read-only and don't burn the budget.
+  if (req.method === 'POST') {
+    const userId = requireAuth(req);
+    if (!userId) {
+      applyCors(res);
+      res.status(401).json({ error: 'auth required — POST /api/auth/anonymous first' });
+      return;
+    }
+    if (rateLimited(req)) {
+      applyCors(res);
+      res.status(429).json({ error: 'rate limit: 5 generations per hour per IP' });
+      return;
+    }
+  }
+
+  // Routes (after vercel.json rewrites):
+  //   POST /api/avatar                                      (submit)
+  //   GET  /api/avatar?uuid=X&action=status                  (status)
+  //   GET  /api/avatar?uuid=X&action=glb                     (download)
   const url = new URL(req.url, 'http://x');
-  const segs = url.pathname.split('/').filter(Boolean); // ['api','avatar', maybe uuid, maybe action]
-  const uuid = segs[2];
-  const action = segs[3];
+  const uuid = url.searchParams.get('uuid');
+  const action = url.searchParams.get('action');
 
   try {
     if (req.method === 'POST' && !uuid) return handleSubmit(req, res, apiKey);
