@@ -10,3 +10,4 @@ IMG*.jpg
 IMG*.jpeg
 IMG*.png
 
+.env*.local
