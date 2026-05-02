@@ -60,7 +60,10 @@ export class Game {
     this.score  = 0;
     this.resonance = 0;
 
-    this.assetLoader = new AssetLoader();
+    this.assetLoader = new AssetLoader(undefined, {
+      timeoutMs: 10_000,
+      onProgress: (info) => this._updateLoadingUI(info),
+    });
     this.audio       = new AudioManager();
     this.levels      = new LevelManager(this);
     this.particles   = null;          // populated in _initThree (needs scene)
@@ -117,12 +120,63 @@ export class Game {
     console.log('[Game] boot');
     this._initThree();
     this._wireUI();
+    this._setupLoadingUI();    // wire force-start + reset progress fields
+
+    // After 8 s on the loading screen, reveal the FORCE START escape hatch.
+    this._forceStartTimer = setTimeout(() => {
+      const btn = document.getElementById('btn-force-start');
+      if (btn) {
+        btn.classList.remove('hidden');
+        console.warn('[boot] Loading is taking a while — FORCE START revealed.');
+      }
+    }, 8_000);
+
     await this.assetLoader.loadAll();
+    clearTimeout(this._forceStartTimer);
+
     this._buildScene();
     this.input = new InputManager(this.canvas, this.camera);
     this._enterMenu();
     document.getElementById('loading')?.classList.add('hidden');
     console.log('[Game] ready');
+  }
+
+  /** Wire the loading-screen DOM (Force Start handler, reset fields). */
+  _setupLoadingUI() {
+    const force = document.getElementById('btn-force-start');
+    if (force && !force.dataset.bound) {
+      force.dataset.bound = '1';
+      force.addEventListener('click', () => {
+        console.warn('[boot] FORCE START clicked');
+        this.assetLoader.forceFinish();
+      });
+    }
+    // Reset progress
+    const fill = document.getElementById('loading-fill');
+    if (fill)  fill.style.width = '0%';
+    const cnt = document.getElementById('loading-count');
+    if (cnt)   cnt.textContent = `0 / ${Object.keys(this.assetLoader.urls).length}`;
+    const cur = document.getElementById('loading-current');
+    if (cur)   cur.textContent = 'initializing';
+    const title = document.getElementById('loading-title');
+    if (title) title.textContent = 'CHARGING SMILE ENGINES…';
+  }
+
+  /** Called by AssetLoader for each asset state change. */
+  _updateLoadingUI({ key, url, status, completed, total }) {
+    const file = (url || '').split('/').pop() || key || '?';
+    const cur = document.getElementById('loading-current');
+    if (cur) {
+      if (status === 'loading') cur.textContent = `Loading: ${file}`;
+      else if (status === 'done')    cur.textContent = `✓ ${file}`;
+      else if (status === 'error')   cur.textContent = `⚠ failed: ${file}`;
+      else if (status === 'timeout') cur.textContent = `⏱ timeout: ${file}`;
+      else if (status === 'forced')  cur.textContent = `⚡ forced: ${file}`;
+    }
+    const fill = document.getElementById('loading-fill');
+    if (fill && total > 0) fill.style.width = `${Math.round(100 * completed / total)}%`;
+    const cnt = document.getElementById('loading-count');
+    if (cnt) cnt.textContent = `${completed} / ${total}`;
   }
 
   start() {
