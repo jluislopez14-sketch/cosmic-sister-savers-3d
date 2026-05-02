@@ -1,0 +1,12 @@
+node_modules/
+.vercel/
+.env
+.env.*
+.DS_Store
+_crops/
+*.log
+# Personal reference photos (used to generate avatar GLBs — keep private)
+IMG*.jpg
+IMG*.jpeg
+IMG*.png
+

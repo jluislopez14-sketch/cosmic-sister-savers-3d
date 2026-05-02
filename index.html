@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0b0420" />
+  <title>Cosmic Sister Savers · The Family Reunion Saga</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Online leaderboard: empty string = same origin (works after Vercel deploy).
+       Set to a full URL to point at a different backend. -->
+  <script>window.__remoteLeaderboardURL = window.location.origin.includes('localhost') ? null : window.location.origin;</script>
+
+  <!--
+    Three.js via CDN using an importmap so internal "three" / "three/addons/..."
+    imports inside addon files resolve correctly.
+    Pinned to a specific version for reproducibility.
+  -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three":           "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/":   "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="game-frame">
+    <!-- Three.js renders into this canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- ================== HUD ================== -->
+    <div id="hud" class="hidden">
+      <div id="hud-hearts" class="hud-hearts" aria-label="Lives"></div>
+      <div id="hud-score"  class="hud-score">0</div>
+      <div id="hud-level"  class="hud-level">LVL 1</div>
+
+      <div id="hud-resonance" class="hud-resonance" aria-label="Family Resonance">
+        <div class="hud-res-label">FAMILY RESONANCE MATRIX 💖</div>
+        <div class="hud-res-bar"><div id="hud-res-fill" class="hud-res-fill"></div></div>
+      </div>
+
+      <div id="hud-boss" class="hud-boss hidden">
+        <div class="hud-boss-label">LORD GRUMP · MOTHERSHIP</div>
+        <div class="hud-boss-bar"><div id="hud-boss-fill" class="hud-boss-fill"></div></div>
+      </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div id="toast-stack" class="toast-stack"></div>
+
+    <!-- ================== Main Menu ================== -->
+    <div id="screen-menu" class="screen">
+      <div class="menu-card">
+        <div class="title-rainbow">COSMIC<br/>SISTER<br/>SAVERS</div>
+        <div class="title-sub">THE FAMILY REUNION SAGA · 3D</div>
+        <div class="title-cast">👧🏽 👧🏻 👽 · 🦸‍♂️ 🦸‍♀️</div>
+        <div id="menu-stats" class="stats-block hidden">
+          <div class="stats-row"><span class="k">HIGH SCORE</span><span id="ms-score" class="v">0</span></div>
+          <div class="stats-row"><span class="k">BEST COMBO</span><span id="ms-combo" class="v">×0</span></div>
+          <div class="stats-row"><span class="k">VICTORIES</span><span id="ms-vict" class="v">0</span></div>
+          <div class="stats-row"><span class="k">ACHIEVEMENTS</span><span id="ms-achs" class="v">0/0</span></div>
+        </div>
+        <button id="btn-start" class="big-btn">START MISSION</button>
+        <button id="btn-hard" class="ghost-btn" style="display:none">🔥 HARD MODE: OFF</button>
+        <button id="btn-ship" class="ghost-btn" style="display:none">🚀 SHIP: DEFAULT</button>
+        <button id="btn-leaderboard" class="ghost-btn">🏆 LEADERBOARD</button>
+        <button id="btn-achievements" class="ghost-btn">🏅 ACHIEVEMENTS</button>
+        <button id="btn-coop" class="ghost-btn">👯 CO-OP: OFF</button>
+        <button id="btn-shop" class="ghost-btn">🛒 SMILE SHOP</button>
+        <button id="btn-daily" class="ghost-btn">📅 DAILY: OFF</button>
+        <button id="btn-mute" class="ghost-btn">🔊 SOUND ON</button>
+        <div class="hint">📱 Drag to fly · Auto-fires Smile Beams · Tap MERGE button at boss</div>
+      </div>
+    </div>
+
+    <!-- ================== Story Dialog ================== -->
+    <div id="screen-story" class="screen hidden">
+      <div class="comic-frame">
+        <div id="comic-title" class="comic-title">LEVEL 1</div>
+        <div id="comic-panels" class="comic-panels"></div>
+        <button id="btn-story-next" class="big-btn">NEXT ➜</button>
+        <button id="btn-story-skip" class="ghost-btn">Skip</button>
+      </div>
+    </div>
+
+    <!-- ================== Boss Interactive Event ================== -->
+    <div id="screen-merge" class="screen hidden">
+      <div class="menu-card">
+        <div class="big-emoji">🤖✨</div>
+        <div class="title-mini">LORD GRUMP IS WEAKENING!</div>
+        <div class="title-sub">Lisa, Alaia, Greeny, Mom & Dad combine their power...</div>
+        <button id="btn-merge" class="big-btn glow">⚡ MERGE DUO-DRIVE MECH! ⚡</button>
+      </div>
+    </div>
+
+    <!-- ================== Victory ================== -->
+    <div id="screen-victory" class="screen hidden">
+      <div class="menu-card">
+        <div class="big-emoji">🌟✨🌟</div>
+        <div class="title-rainbow small">UNIVERSE SAVED!</div>
+        <div class="title-cast">👧🏽 👧🏻 👽 · 🦸‍♂️ 🦸‍♀️</div>
+        <div id="vic-stats" class="stats-block"></div>
+        <button id="btn-vic-menu" class="big-btn">MAIN MENU</button>
+      </div>
+    </div>
+
+    <!-- ================== Game Over ================== -->
+    <div id="screen-gameover" class="screen hidden">
+      <div class="menu-card">
+        <div class="big-emoji">💔</div>
+        <div class="title-mini">MISSION FAILED</div>
+        <div id="go-stats" class="stats-block"></div>
+        <button id="btn-retry"   class="big-btn">TRY AGAIN</button>
+        <button id="btn-go-menu" class="ghost-btn">Main Menu</button>
+      </div>
+    </div>
+
+    <!-- Loading overlay (briefly visible while Three.js + assets warm up) -->
+    <div id="loading" class="screen">
+      <div class="menu-card">
+        <div class="big-emoji">🚀</div>
+        <div class="title-mini">CHARGING SMILE ENGINES…</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
