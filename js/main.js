@@ -6,7 +6,7 @@
 
 import { Game, ASSET_MANIFEST } from './Game.js';
 
-const BUILD_ID = '1777737235';
+const BUILD_ID = '1777740862';
 console.log(`%c[main] Cosmic Sister Savers 3D — build ${BUILD_ID}`,
             'color:#ff66cc;font-weight:bold;font-size:14px');
 console.log(`[main] ASSET_MANIFEST imported: ${ASSET_MANIFEST?.length ?? 'undefined'} entries`);

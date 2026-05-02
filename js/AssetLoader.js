@@ -28,7 +28,9 @@
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { SkeletonUtils } from 'three/addons/utils/SkeletonUtils.js';
+// Three.js r0.155+ exports SkeletonUtils as individual functions.
+// Importing as a namespace gives us SkeletonUtils.clone(...).
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
 // ---- Asset registry ----
 //
