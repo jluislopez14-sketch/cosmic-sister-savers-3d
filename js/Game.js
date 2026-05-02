@@ -25,6 +25,43 @@ import { AchievementsManager, ACHIEVEMENTS } from './Achievements.js';
 import { RemoteLeaderboard } from './RemoteLeaderboard.js';
 import { UPGRADES } from './SaveData.js';
 
+// ============================================================================
+// ASSET MANIFEST — single source of truth for every GLB the game needs.
+// Edit this list to add/remove/swap models. The AssetLoader takes it
+// directly. If a file is missing or slow, the loader substitutes a magenta
+// BoxGeometry placeholder so the game still boots.
+// ============================================================================
+export const ASSET_MANIFEST = [
+  // --- Heroes (avatars composing the cockpit + menu showcase) ---
+  { name: 'alaia',          url: 'models/alaia.glb' },
+  { name: 'lisabel',        url: 'models/lisabel.glb' },
+  { name: 'jose',           url: 'models/jose.glb' },
+  { name: 'mom',            url: 'models/mom.glb' },
+  { name: 'greeny',         url: 'models/greeny.glb' },
+
+  // --- Vehicles + props (static, no skeletal animation) ---
+  { name: 'player_ship',    url: 'models/player_ship.glb' },
+  { name: 'enemy',          url: 'models/enemy_fighter.glb' },
+  { name: 'asteroid',       url: 'models/asteroid.glb' },
+  { name: 'mothership',     url: 'models/mothership.glb' },
+  { name: 'heart',          url: 'models/powerup_heart.glb' },
+
+  // --- High-fidelity rigged characters (drop in when Blender export ready) ---
+  { name: 'player_rigged',  url: 'models/player_rigged.glb' },
+  { name: 'enemy_drone',    url: 'models/enemy_drone.glb' },
+  { name: 'mech_rigged',    url: 'models/mech_rigged.glb' },
+  { name: 'boss_grump',     url: 'models/boss_grump.glb' },
+
+  // --- Environments ---
+  { name: 'env_space_track', url: 'models/env_space_track.glb' },
+  { name: 'env_boss_arena',  url: 'models/env_boss_arena.glb' },
+];
+
+console.log(`[Game] ASSET_MANIFEST: ${ASSET_MANIFEST.length} entries`);
+if (ASSET_MANIFEST.length === 0) {
+  console.error('[Game] ASSET_MANIFEST is empty — game will boot with no models.');
+}
+
 // ---------- World tunables ----------
 const BOUNDS = { xMin: -7, xMax: 7, zMin: -8, zMax: 5.5 };
 const PLAYER_RADIUS = 0.9;
@@ -60,10 +97,11 @@ export class Game {
     this.score  = 0;
     this.resonance = 0;
 
-    this.assetLoader = new AssetLoader(undefined, {
+    this.assetLoader = new AssetLoader(ASSET_MANIFEST, {
       timeoutMs: 10_000,
       onProgress: (info) => this._updateLoadingUI(info),
     });
+    console.log(`[Game] AssetLoader initialized with ${Object.keys(this.assetLoader.urls).length} assets`);
     this.audio       = new AudioManager();
     this.levels      = new LevelManager(this);
     this.particles   = null;          // populated in _initThree (needs scene)
@@ -173,13 +211,17 @@ export class Game {
         this.assetLoader.forceFinish();
       });
     }
+    const total = Object.keys(this.assetLoader.urls).length;
+    if (total === 0) {
+      console.error('[boot] AssetLoader has 0 urls — manifest failed to import. Check ASSET_MANIFEST in Game.js.');
+    }
     // Reset progress
     const fill = document.getElementById('loading-fill');
     if (fill)  fill.style.width = '0%';
     const cnt = document.getElementById('loading-count');
-    if (cnt)   cnt.textContent = `0 / ${Object.keys(this.assetLoader.urls).length}`;
+    if (cnt)   cnt.textContent = `0 / ${total}`;
     const cur = document.getElementById('loading-current');
-    if (cur)   cur.textContent = 'initializing';
+    if (cur)   cur.textContent = total > 0 ? 'queueing assets…' : '⚠ empty manifest';
     const title = document.getElementById('loading-title');
     if (title) title.textContent = 'CHARGING SMILE ENGINES…';
   }

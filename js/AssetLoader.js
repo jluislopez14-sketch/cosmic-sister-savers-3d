@@ -80,7 +80,33 @@ const MAGENTA_MAT_PARAMS = {
 
 export class AssetLoader {
   constructor(assets = ASSETS, options = {}) {
-    this.urls = { ...assets };
+    // Accept either format:
+    //   1. Object map:    { name1: url1, name2: url2, ... }
+    //   2. Array of pairs: [ { name: 'foo', url: 'models/foo.glb' }, ... ]
+    // Array form is preferred — easier to scan and reorder.
+    if (Array.isArray(assets)) {
+      this.urls = {};
+      for (const entry of assets) {
+        if (!entry || !entry.name || !entry.url) {
+          console.warn('[AssetLoader] manifest entry missing name/url:', entry);
+          continue;
+        }
+        this.urls[entry.name] = entry.url;
+      }
+    } else if (assets && typeof assets === 'object') {
+      this.urls = { ...assets };
+    } else {
+      console.error('[AssetLoader] manifest is not an array or object:', assets);
+      this.urls = {};
+    }
+
+    const count = Object.keys(this.urls).length;
+    if (count === 0) {
+      console.error('[AssetLoader] WARNING: empty manifest — no GLBs will be loaded.');
+    } else {
+      console.log(`[AssetLoader] manifest accepted: ${count} entries — ${Object.keys(this.urls).join(', ')}`);
+    }
+
     this.cache = {};
     this._loader = new GLTFLoader();
 
