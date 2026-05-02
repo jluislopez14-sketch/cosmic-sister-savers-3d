@@ -119,9 +119,7 @@
       </div>
     </div>
 
-    <!-- Loading overlay — Game._setupLoadingUI updates the count + label
-         using the ASSET_MANIFEST length. The static "16" below is just
-         the initial paint while the JS module evaluates. -->
+    <!-- Loading overlay -->
     <div id="loading" class="screen">
       <div class="menu-card">
         <div class="big-emoji">🚀</div>
@@ -130,10 +128,13 @@
         <div class="hud-res-bar" style="width:80%;max-width:300px"><div id="loading-fill" class="hud-res-fill" style="width:0%"></div></div>
         <div id="loading-count" style="font-size:11px;color:#888;font-variant-numeric:tabular-nums">0 / 16</div>
         <button id="btn-force-start" class="ghost-btn hidden" style="margin-top:14px">⚡ FORCE START</button>
+        <div id="build-stamp" style="margin-top:14px;font-family:monospace;font-size:10px;color:#666;letter-spacing:1px">build 1777735906</div>
       </div>
     </div>
   </div>
 
-  <script type="module" src="js/main.js"></script>
+  <!-- ?v=<build-id> busts CDN+browser cache for the JS entry point.
+       Bump this string on every deploy. -->
+  <script type="module" src="js/main.js?v=1777735906"></script>
 </body>
 </html>

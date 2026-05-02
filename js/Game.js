@@ -224,6 +224,10 @@ export class Game {
     if (cur)   cur.textContent = total > 0 ? 'queueing assets…' : '⚠ empty manifest';
     const title = document.getElementById('loading-title');
     if (title) title.textContent = 'CHARGING SMILE ENGINES…';
+    // Surface the manifest size on the build-stamp so users can confirm
+    // visually (no DevTools needed).
+    const stamp = document.getElementById('build-stamp');
+    if (stamp) stamp.textContent += ` · manifest ${total} assets`;
   }
 
   /** Called by AssetLoader for each asset state change. */
