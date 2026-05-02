@@ -118,11 +118,11 @@ export class Game {
   // ============ LIFECYCLE ============
   async boot() {
     console.log('[Game] boot');
-    this._initThree();
-    this._wireUI();
-    this._setupLoadingUI();    // wire force-start + reset progress fields
 
-    // After 8 s on the loading screen, reveal the FORCE START escape hatch.
+    // Wire the loading UI + Force Start FIRST, before any work that could
+    // throw. If _initThree() blows up (e.g. WebGL unavailable on this device)
+    // the user still gets a visible button to recover from.
+    this._setupLoadingUI();
     this._forceStartTimer = setTimeout(() => {
       const btn = document.getElementById('btn-force-start');
       if (btn) {
@@ -131,14 +131,36 @@ export class Game {
       }
     }, 8_000);
 
-    await this.assetLoader.loadAll();
-    clearTimeout(this._forceStartTimer);
+    // Boot in a try/catch so any failure surfaces in the loading UI instead
+    // of soft-locking on "initializing".
+    try {
+      this._initThree();
+      this._wireUI();
+      await this.assetLoader.loadAll();
+      this._buildScene();
+      this.input = new InputManager(this.canvas, this.camera);
+      this._enterMenu();
+      document.getElementById('loading')?.classList.add('hidden');
+      console.log('[Game] ready');
+    } catch (e) {
+      console.error('[Game] boot failed:', e);
+      this._reportBootFailure(e);
+    } finally {
+      clearTimeout(this._forceStartTimer);
+    }
+  }
 
-    this._buildScene();
-    this.input = new InputManager(this.canvas, this.camera);
-    this._enterMenu();
-    document.getElementById('loading')?.classList.add('hidden');
-    console.log('[Game] ready');
+  /** Surface a fatal boot error in the loading screen + reveal Force Start. */
+  _reportBootFailure(err) {
+    const cur = document.getElementById('loading-current');
+    if (cur) cur.textContent = `⚠ boot error: ${(err?.message || err).toString().slice(0, 80)}`;
+    const title = document.getElementById('loading-title');
+    if (title) title.textContent = 'BOOT FAILED — see console';
+    const btn = document.getElementById('btn-force-start');
+    if (btn) {
+      btn.classList.remove('hidden');
+      btn.textContent = '⚡ TRY ANYWAY';
+    }
   }
 
   /** Wire the loading-screen DOM (Force Start handler, reset fields). */
